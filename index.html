@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>អាល់ប៊ុមអនុស្សាវរីយ៍ជីវិត - Memoria Gallery</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Kantumruy Pro & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Kantumruy Pro"', '"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    colors: {
+                        rosebrand: {
+                            50: '#fff1f2',
+                            100: '#ffe4e6',
+                            500: '#f43f5e',
+                            600: '#e11d48',
+                            700: '#be123c',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass {
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+        .dark .glass {
+            background: rgba(15, 23, 42, 0.90);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+        .img-card {
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+        }
+        .img-card:hover {
+            transform: translateY(-4px);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen font-sans transition-colors duration-300">
+
+    <!-- Navigation Header -->
+    <header class="sticky top-0 z-40 glass border-b border-slate-200/80 dark:border-slate-800/80 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3.5 rtl:space-x-reverse">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-rosebrand-600 to-amber-500 flex items-center justify-center text-white shadow-md shadow-rosebrand-500/20 shrink-0">
+                    <i class="fa-solid fa-camera-retro text-lg"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-bold text-base sm:text-lg leading-tight bg-gradient-to-r from-rosebrand-600 via-pink-600 to-amber-600 bg-clip-text text-transparent dark:from-rosebrand-400 dark:to-amber-300">
+                            អាល់ប៊ុមអនុស្សាវរីយ៍
+                        </h1>
+                        <span id="syncBadge" class="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Cloud Synced
+                        </span>
+                    </div>
+                    <p class="text-[11px] text-slate-500">រក្សាទុកគ្រប់រូបភាព និងអនុស្សាវរីយ៍សំខាន់ៗក្នុងជីវិត</p>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <button onclick="openUploadModal()" class="px-3.5 py-2 rounded-xl bg-rosebrand-600 hover:bg-rosebrand-700 text-white text-xs font-semibold shadow-md shadow-rosebrand-500/20 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>បង្ហោះរូបថ្មី</span>
+                </button>
+                <button onclick="toggleDarkMode()" class="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                    <i id="themeIcon" class="fa-solid fa-moon text-sm"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+        <!-- Top Statistics & Quick Filters -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div class="glass p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center space-x-3">
+                <div class="w-11 h-11 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center text-lg">
+                    <i class="fa-regular fa-images"></i>
+                </div>
+                <div>
+                    <div id="statTotalPhotos" class="text-xl font-bold leading-tight">0</div>
+                    <div class="text-xs text-slate-500">រូបថតសរុប</div>
+                </div>
+            </div>
+            <div class="glass p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center space-x-3">
+                <div class="w-11 h-11 rounded-xl bg-pink-50 dark:bg-pink-950/60 text-pink-600 dark:text-pink-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-heart"></i>
+                </div>
+                <div>
+                    <div id="statFavorites" class="text-xl font-bold leading-tight">0</div>
+                    <div class="text-xs text-slate-500">រូបពិសេស (❤️)</div>
+                </div>
+            </div>
+            <div class="glass p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center space-x-3">
+                <div class="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-folder-open"></i>
+                </div>
+                <div>
+                    <div id="statAlbums" class="text-xl font-bold leading-tight">0</div>
+                    <div class="text-xs text-slate-500">អាល់ប៊ុមសរុប</div>
+                </div>
+            </div>
+            <div class="glass p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center space-x-3">
+                <div class="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg">
+                    <i class="fa-regular fa-calendar-days"></i>
+                </div>
+                <div>
+                    <div id="statLatestYear" class="text-xl font-bold leading-tight">2026</div>
+                    <div class="text-xs text-slate-500">ឆ្នាំបច្ចុប្បន្ន</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Album Selector Tabs & Search Filter -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <!-- Dynamic Album Pills -->
+            <div id="albumTabs" class="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1.5 sm:pb-0">
+                <!-- Javascript will render Albums here -->
+            </div>
+
+            <!-- Search and Favorite Filter -->
+            <div class="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                <div class="relative w-full sm:w-56">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-xs text-slate-400"></i>
+                    <input type="text" id="searchPhotos" oninput="renderPhotos()" placeholder="ស្វែងរកតាមចំណងជើង..." class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-rosebrand-500">
+                </div>
+                <button onclick="toggleFavFilter()" id="btnFavFilter" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:border-rosebrand-500 transition flex items-center gap-1.5 shrink-0">
+                    <i class="fa-solid fa-heart text-slate-400"></i>
+                    <span>រូប ❤️</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Gallery Grid Container -->
+        <div id="galleryGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            <!-- Dynamic Photo Cards -->
+        </div>
+
+        <!-- Empty State Notice -->
+        <div id="emptyNotice" class="text-center py-16 glass rounded-3xl border border-slate-200/80 dark:border-slate-800 hidden">
+            <div class="w-16 h-16 rounded-full bg-rose-50 dark:bg-rose-950/50 text-rosebrand-500 flex items-center justify-center mx-auto text-2xl mb-3">
+                <i class="fa-solid fa-photo-film"></i>
+            </div>
+            <h3 class="font-bold text-sm text-slate-700 dark:text-slate-200">មិនទាន់មានរូបភាពក្នុងអាល់ប៊ុមនេះឡើយ</h3>
+            <p class="text-xs text-slate-400 mt-1 mb-4">សូមចុចប៊ូតុង «បង្ហោះរូបថ្មី» ដើម្បីរក្សាទុករូបអនុស្សាវរីយ៍ដំបូងរបស់អ្នក</p>
+            <button onclick="openUploadModal()" class="px-4 py-2 rounded-xl bg-rosebrand-600 hover:bg-rosebrand-700 text-white text-xs font-medium shadow-md">
+                + បង្ហោះរូបភាពដំបូង
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Modal: Upload New Memory / Photo -->
+    <div id="uploadModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold flex items-center gap-2 text-slate-900 dark:text-slate-100">
+                    <i class="fa-solid fa-cloud-arrow-up text-rosebrand-600"></i> រក្សាទុករូបអនុស្សាវរីយ៍ថ្មី
+                </h3>
+                <button onclick="closeUploadModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form id="uploadForm" onsubmit="handleSavePhoto(event)" class="space-y-3.5 text-xs">
+                <!-- Image Input Choice: Local File or URL -->
+                <div>
+                    <label class="block text-slate-500 mb-1 font-semibold">ជ្រើសរើសរូបភាព (File ឬ Link URL)៖</label>
+                    <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-4 text-center cursor-pointer hover:border-rosebrand-500 transition relative bg-slate-50 dark:bg-slate-950" onclick="document.getElementById('fileInput').click()">
+                        <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="previewLocalImage(event)">
+                        <div id="uploadPlaceholder" class="space-y-1">
+                            <i class="fa-solid fa-image text-3xl text-slate-400"></i>
+                            <p class="text-slate-600 dark:text-slate-400 font-medium">ចុចទីនេះដើម្បីជ្រើសរូបពីទូរសព្ទ/កុំព្យូទ័រ</p>
+                            <p class="text-[10px] text-slate-400">ប្រព័ន្ធនឹងបង្រួមទំហំរូបស្វ័យប្រវត្តិកុំឱ្យពេញ Cloud</p>
+                        </div>
+                        <img id="imagePreview" src="" class="hidden max-h-48 mx-auto rounded-xl object-contain shadow-sm">
+                    </div>
+                    <div class="mt-2 text-center text-[11px] text-slate-400">- ឬដាក់តាមតំណភ្ជាប់រូបភាព (Image URL) -</div>
+                    <input type="url" id="imageUrlInput" oninput="previewUrlImage()" placeholder="https://example.com/photo.jpg" class="w-full mt-1.5 px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-rosebrand-500">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-500 mb-1 font-semibold">ចំណងជើងរូបភាព / កម្មវិធី៖</label>
+                        <input type="text" id="photoTitle" required placeholder="ឧ. ទិវាគ្រូបង្រៀន ឬដំណើរកម្សាន្ត..." class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 font-medium focus:outline-none focus:ring-2 focus:ring-rosebrand-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-500 mb-1 font-semibold">អាល់ប៊ុម / ប្រភេទ៖</label>
+                        <div class="flex gap-1.5">
+                            <select id="albumSelect" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 font-medium focus:outline-none focus:ring-2 focus:ring-rosebrand-500">
+                                <option value="ការងារបង្រៀន">🏫 ការងារបង្រៀន/សាលារៀន</option>
+                                <option value="គ្រួសារ">👨‍👩‍👧 គ្រួសារ</option>
+                                <option value="ដំណើរកម្សាន្ត">✈️ ដំណើរកម្សាន្ត</option>
+                                <option value="ផ្ទាល់ខ្លួន">✨ អនុស្សាវរីយ៍ផ្ទាល់ខ្លួន</option>
+                            </select>
+                            <button type="button" onclick="promptNewAlbum()" title="ថែមអាល់ប៊ុមថ្មី" class="px-2.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-500 mb-1 font-semibold">កាលបរិច្ឆេទថតរូប៖</label>
+                        <input type="date" id="photoDate" required class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 font-medium focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-slate-500 mb-1 font-semibold">ទីកន្លែង / ទីតាំង៖</label>
+                        <input type="text" id="photoLocation" placeholder="ឧ. វិទ្យាល័យ ជា ស៊ីម ឈូកវ៉ា..." class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 font-medium focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-slate-500 mb-1 font-semibold">កំណត់ត្រាដំណើររឿង / ការចងចាំ៖</label>
+                    <textarea id="photoDescription" rows="2" placeholder="សរសេរបរិយាយរឿងរ៉ាវដែលគួរឱ្យចងចាំពេលថតរូបនេះ..." class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-rosebrand-500"></textarea>
+                </div>
+
+                <div class="flex items-center gap-2 pt-1">
+                    <input type="checkbox" id="photoFavorite" class="w-4 h-4 rounded text-rosebrand-600 focus:ring-rosebrand-500">
+                    <label for="photoFavorite" class="cursor-pointer text-slate-700 dark:text-slate-300 font-medium">❤️ ដាក់សម្គាល់ជាអនុស្សាវរីយ៍ពិសេសបំផុត (Favorite)</label>
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeUploadModal()" class="flex-1 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800">បោះបង់</button>
+                    <button type="submit" id="saveBtn" class="flex-1 py-2 text-xs font-semibold rounded-xl bg-rosebrand-600 hover:bg-rosebrand-700 text-white shadow-md">រក្សាទុកលើ Cloud</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lightbox Modal (View Full Picture & Details) -->
+    <div id="lightboxModal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md hidden items-center justify-center p-3 sm:p-6" onclick="closeLightbox(event)">
+        <div class="relative max-w-4xl w-full bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh]" onclick="event.stopPropagation()">
+            <!-- Photo Side -->
+            <div class="flex-1 bg-black flex items-center justify-center p-2 relative min-h-[300px]">
+                <img id="lightboxImg" src="" class="max-h-[75vh] w-auto max-w-full object-contain rounded-xl">
+                <button onclick="closeLightboxDirect()" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 md:hidden">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <!-- Story Details Side -->
+            <div class="w-full md:w-80 p-5 flex flex-col justify-between space-y-4 text-xs overflow-y-auto">
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span id="lightboxAlbum" class="px-2.5 py-0.5 rounded-full bg-rosebrand-500/20 text-rosebrand-300 font-semibold text-[11px]">-</span>
+                        <button onclick="closeLightboxDirect()" class="text-slate-400 hover:text-white hidden md:block">
+                            <i class="fa-solid fa-xmark text-lg"></i>
+                        </button>
+                    </div>
+                    <div>
+                        <h2 id="lightboxTitle" class="text-base font-bold text-white leading-tight mb-1">-</h2>
+                        <div class="space-y-1 text-slate-400 text-[11px]">
+                            <p><i class="fa-regular fa-calendar mr-1.5 text-rosebrand-400"></i> <span id="lightboxDate">-</span></p>
+                            <p id="lightboxLocationRow"><i class="fa-solid fa-location-dot mr-1.5 text-amber-400"></i> <span id="lightboxLocation">-</span></p>
+                        </div>
+                    </div>
+                    <div class="border-t border-slate-800 pt-3">
+                        <p class="text-slate-400 font-semibold mb-1">ដំណើររឿងអនុស្សាវរីយ៍៖</p>
+                        <p id="lightboxDescription" class="text-slate-300 leading-relaxed whitespace-pre-wrap bg-slate-800/50 p-3 rounded-2xl border border-slate-800/80">-</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-2 border-t border-slate-800 pt-3">
+                    <a id="lightboxDownloadBtn" href="#" download="memory.jpg" class="flex-1 py-2 text-center rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-download"></i> ទាញយករូប
+                    </a>
+                    <button id="lightboxDeleteBtn" class="px-3 py-2 rounded-xl bg-rose-950/60 text-rose-400 hover:bg-rose-900/60 transition">
+                        <i class="fa-regular fa-trash-can"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Directly connect to Chan's Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDBTmY6YKLmpQ4mqAZm96P39IYtR4uQvtE",
+            authDomain: "my-planner-app-e9576.firebaseapp.com",
+            projectId: "my-planner-app-e9576",
+            storageBucket: "my-planner-app-e9576.firebasestorage.app",
+            messagingSenderId: "820137960838",
+            appId: "1:820137960838:web:df39f02662e2aff521b807",
+            measurementId: "G-9LCSDVH7C5"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+
+        // State variables
+        let photos = [];
+        let currentAlbum = 'all';
+        let showFavoritesOnly = false;
+        let selectedBase64Image = null;
+        let albumsList = ['ការងារបង្រៀន', 'គ្រួសារ', 'ដំណើរកម្សាន្ត', 'ផ្ទាល់ខ្លួន'];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const today = new Date().toISOString().slice(0, 10);
+            document.getElementById('photoDate').value = today;
+
+            loadSavedAlbums();
+            renderAlbumTabs();
+            listenToPhotos();
+        });
+
+        // Albums Management
+        function loadSavedAlbums() {
+            const saved = localStorage.getItem('memoria_albums');
+            if (saved) albumsList = JSON.parse(saved);
+            updateAlbumSelectOptions();
+        }
+
+        function updateAlbumSelectOptions() {
+            const sel = document.getElementById('albumSelect');
+            sel.innerHTML = '';
+            albumsList.forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = a;
+                opt.textContent = a;
+                sel.appendChild(opt);
+            });
+        }
+
+        function promptNewAlbum() {
+            const name = prompt("សូមវាយឈ្មោះអាល់ប៊ុមថ្មី (ឧ. មិត្តភក្តិ, កីឡា...)៖");
+            if (name && name.trim()) {
+                const clean = name.trim();
+                if (!albumsList.includes(clean)) {
+                    albumsList.push(clean);
+                    localStorage.setItem('memoria_albums', JSON.stringify(albumsList));
+                    updateAlbumSelectOptions();
+                    renderAlbumTabs();
+                    document.getElementById('albumSelect').value = clean;
+                }
+            }
+        }
+
+        function renderAlbumTabs() {
+            const container = document.getElementById('albumTabs');
+            container.innerHTML = '';
+
+            // 'All' tab
+            const btnAll = document.createElement('button');
+            btnAll.className = `px-3.5 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition ${currentAlbum === 'all' ? 'bg-rosebrand-600 text-white shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800'}`;
+            btnAll.textContent = 'ទាំងអស់';
+            btnAll.onclick = () => { currentAlbum = 'all'; renderAlbumTabs(); renderPhotos(); };
+            container.appendChild(btnAll);
+
+            albumsList.forEach(album => {
+                const btn = document.createElement('button');
+                btn.className = `px-3.5 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition ${currentAlbum === album ? 'bg-rosebrand-600 text-white shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800'}`;
+                btn.textContent = album;
+                btn.onclick = () => { currentAlbum = album; renderAlbumTabs(); renderPhotos(); };
+                container.appendChild(btn);
+            });
+
+            document.getElementById('statAlbums').innerText = albumsList.length;
+        }
+
+        // Real-time Photo Collection Listener
+        let unsubscribePhotos = null;
+        function listenToPhotos() {
+            if (unsubscribePhotos) unsubscribePhotos();
+
+            unsubscribePhotos = db.collection('memoria_photos').orderBy('date', 'desc')
+                .onSnapshot(snapshot => {
+                    photos = [];
+                    snapshot.forEach(doc => {
+                        photos.push({ id: doc.id, ...doc.data() });
+                    });
+                    renderPhotos();
+                    updateStats();
+                }, err => {
+                    console.error("Photos error:", err);
+                });
+        }
+
+        // Image Compression & File Preview
+        function previewLocalImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // Compress image to max 1200px width/height for fast load & cloud saving
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const maxDim = 1200;
+
+                    if (width > height && width > maxDim) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    } else if (height > maxDim) {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // High quality JPEG
+                    selectedBase64Image = canvas.toDataURL('image/jpeg', 0.82);
+
+                    const preview = document.getElementById('imagePreview');
+                    preview.src = selectedBase64Image;
+                    preview.classList.remove('hidden');
+                    document.getElementById('uploadPlaceholder').classList.add('hidden');
+                    document.getElementById('imageUrlInput').value = '';
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function previewUrlImage() {
+            const url = document.getElementById('imageUrlInput').value.trim();
+            if (url) {
+                selectedBase64Image = url;
+                const preview = document.getElementById('imagePreview');
+                preview.src = url;
+                preview.classList.remove('hidden');
+                document.getElementById('uploadPlaceholder').classList.add('hidden');
+            }
+        }
+
+        // Save Photo to Firestore
+        async function handleSavePhoto(e) {
+            e.preventDefault();
+            if (!selectedBase64Image) {
+                alert('សូមជ្រើសរើសរូបភាព ឬបញ្ចូល Link រូបភាពជាមុនសិន!');
+                return;
+            }
+
+            const title = document.getElementById('photoTitle').value.trim();
+            const album = document.getElementById('albumSelect').value;
+            const date = document.getElementById('photoDate').value;
+            const location = document.getElementById('photoLocation').value.trim();
+            const description = document.getElementById('photoDescription').value.trim();
+            const favorite = document.getElementById('photoFavorite').checked;
+
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> កំពុងរក្សាទុក...';
+
+            try {
+                await db.collection('memoria_photos').add({
+                    imageUrl: selectedBase64Image,
+                    title,
+                    album,
+                    date,
+                    location,
+                    description,
+                    favorite,
+                    createdAt: new Date().toISOString()
+                });
+
+                closeUploadModal();
+            } catch (err) {
+                console.error("Save error:", err);
+                alert("មិនអាចរក្សាទុករូបបានទេ សូមពិនិត្យមើលអ៊ីនធឺណិត!");
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = 'រក្សាទុកលើ Cloud';
+            }
+        }
+
+        // Render Photos Grid
+        function renderPhotos() {
+            const grid = document.getElementById('galleryGrid');
+            const emptyNotice = document.getElementById('emptyNotice');
+            const search = document.getElementById('searchPhotos').value.toLowerCase().trim();
+            grid.innerHTML = '';
+
+            let filtered = photos;
+
+            if (currentAlbum !== 'all') {
+                filtered = filtered.filter(p => p.album === currentAlbum);
+            }
+            if (showFavoritesOnly) {
+                filtered = filtered.filter(p => p.favorite);
+            }
+            if (search) {
+                filtered = filtered.filter(p => 
+                    p.title.toLowerCase().includes(search) || 
+                    (p.location && p.location.toLowerCase().includes(search)) ||
+                    (p.description && p.description.toLowerCase().includes(search))
+                );
+            }
+
+            if (filtered.length === 0) {
+                emptyNotice.classList.remove('hidden');
+                return;
+            } else {
+                emptyNotice.classList.add('hidden');
+            }
+
+            filtered.forEach(photo => {
+                const card = document.createElement('div');
+                card.className = "img-card glass rounded-3xl border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-sm flex flex-col justify-between group cursor-pointer";
+                card.onclick = () => openLightbox(photo);
+
+                card.innerHTML = `
+                    <div class="relative w-full aspect-[4/3] bg-slate-100 dark:bg-slate-900 overflow-hidden">
+                        <img src="${photo.imageUrl}" alt="${photo.title}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
+                            <span class="text-white text-[11px] font-medium"><i class="fa-solid fa-expand mr-1"></i> ចុចមើលរូបពេញ</span>
+                        </div>
+                        <button onclick="event.stopPropagation(); toggleFavorite('${photo.id}', ${photo.favorite})" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-center text-sm shadow-sm transition ${photo.favorite ? 'text-rose-500' : 'text-slate-400 hover:text-rose-500'}">
+                            <i class="${photo.favorite ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                        </button>
+                    </div>
+                    <div class="p-4 space-y-2">
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="px-2 py-0.5 rounded-md bg-rosebrand-50 dark:bg-rosebrand-950/60 text-rosebrand-600 dark:text-rosebrand-400 font-semibold">${photo.album}</span>
+                            <span class="text-slate-400"><i class="fa-regular fa-calendar mr-1"></i>${photo.date}</span>
+                        </div>
+                        <h4 class="font-bold text-sm text-slate-800 dark:text-slate-100 truncate">${photo.title}</h4>
+                        ${photo.location ? `<p class="text-[11px] text-slate-400 truncate"><i class="fa-solid fa-location-dot mr-1 text-amber-500"></i>${photo.location}</p>` : ''}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Toggle Favorite Heart
+        async function toggleFavorite(id, currentStatus) {
+            await db.collection('memoria_photos').doc(id).update({
+                favorite: !currentStatus
+            });
+        }
+
+        function toggleFavFilter() {
+            showFavoritesOnly = !showFavoritesOnly;
+            const btn = document.getElementById('btnFavFilter');
+            if (showFavoritesOnly) {
+                btn.className = "px-3 py-2 rounded-xl border border-rosebrand-500 bg-rosebrand-50 dark:bg-rosebrand-950/50 text-rosebrand-600 dark:text-rosebrand-300 text-xs font-semibold transition flex items-center gap-1.5 shrink-0";
+                btn.querySelector('i').className = "fa-solid fa-heart text-rosebrand-500";
+            } else {
+                btn.className = "px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:border-rosebrand-500 transition flex items-center gap-1.5 shrink-0";
+                btn.querySelector('i').className = "fa-solid fa-heart text-slate-400";
+            }
+            renderPhotos();
+        }
+
+        function updateStats() {
+            document.getElementById('statTotalPhotos').innerText = photos.length;
+            document.getElementById('statFavorites').innerText = photos.filter(p => p.favorite).length;
+        }
+
+        // Lightbox Functions
+        function openLightbox(photo) {
+            document.getElementById('lightboxImg').src = photo.imageUrl;
+            document.getElementById('lightboxAlbum').innerText = photo.album;
+            document.getElementById('lightboxTitle').innerText = photo.title;
+            document.getElementById('lightboxDate').innerText = photo.date;
+
+            const locRow = document.getElementById('lightboxLocationRow');
+            if (photo.location) {
+                document.getElementById('lightboxLocation').innerText = photo.location;
+                locRow.classList.remove('hidden');
+            } else {
+                locRow.classList.add('hidden');
+            }
+
+            document.getElementById('lightboxDescription').innerText = photo.description || 'គ្មានកំណត់ត្រាពិពណ៌នាឡើយ។';
+
+            // Download Link
+            const dlBtn = document.getElementById('lightboxDownloadBtn');
+            dlBtn.href = photo.imageUrl;
+            dlBtn.download = `${photo.title || 'memory'}.jpg`;
+
+            // Delete action
+            document.getElementById('lightboxDeleteBtn').onclick = () => deletePhoto(photo.id);
+
+            const modal = document.getElementById('lightboxModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeLightbox(e) {
+            closeLightboxDirect();
+        }
+
+        function closeLightboxDirect() {
+            const modal = document.getElementById('lightboxModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.getElementById('lightboxImg').src = '';
+        }
+
+        async function deletePhoto(id) {
+            if (!confirm("តើលោកគ្រូពិតជាចង់លុបរូបអនុស្សាវរីយ៍នេះចេញពី Cloud មែនទេ?")) return;
+            await db.collection('memoria_photos').doc(id).delete();
+            closeLightboxDirect();
+        }
+
+        // Modal Upload Handlers
+        function openUploadModal() {
+            document.getElementById('uploadModal').classList.remove('hidden');
+            document.getElementById('uploadModal').classList.add('flex');
+        }
+
+        function closeUploadModal() {
+            document.getElementById('uploadModal').classList.add('hidden');
+            document.getElementById('uploadModal').classList.remove('flex');
+            document.getElementById('uploadForm').reset();
+            selectedBase64Image = null;
+            document.getElementById('imagePreview').classList.add('hidden');
+            document.getElementById('uploadPlaceholder').classList.remove('hidden');
+        }
+
+        // Theme Toggle
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            document.getElementById('themeIcon').className = isDark ? 'fa-solid fa-sun text-amber-400' : 'fa-solid fa-moon';
+        }
+    </script>
+</body>
+</html>
